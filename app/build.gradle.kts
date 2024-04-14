@@ -6,6 +6,7 @@ android {
     namespace = "com.example.spotifydupauvremobile"
     compileSdk = 34
 
+
     defaultConfig {
         applicationId = "com.example.spotifydupauvremobile"
         minSdk = 24
@@ -41,6 +42,9 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+    implementation(libs.media)
+    implementation("androidx.core:core-ktx:1.6.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
