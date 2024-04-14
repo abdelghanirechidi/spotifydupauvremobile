@@ -15,10 +15,6 @@ public class SlideshowViewModel extends ViewModel {
         artist = new MutableLiveData<>();
         path = new MutableLiveData<>();
 
-        // Initialisation des valeurs par défaut (peut être adapté à votre logique)
-        title.setValue("Titre par défaut");
-        artist.setValue("Artiste par défaut");
-        path.setValue("Path par défaut");
     }
 
     public LiveData<String> getTitle() {

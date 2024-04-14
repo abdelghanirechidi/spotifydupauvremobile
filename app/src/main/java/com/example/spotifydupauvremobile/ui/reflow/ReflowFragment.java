@@ -17,6 +17,8 @@ import android.media.MediaRecorder;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ReflowFragment extends Fragment {
 
@@ -84,6 +86,51 @@ public class ReflowFragment extends Fragment {
 
     private void convertSpeechToText() {
 
+        // Texte transcrit exemple
+
+        String texteTranscrit = "joue Scrum mium miam de Yoan";
+        Pattern pattern = Pattern.compile("(\\w+)\\s(.*?)\\sde\\s(.*)");
+        Matcher matcher = pattern.matcher(texteTranscrit);
+        if (matcher.find()) {
+            String action = matcher.group(1).toLowerCase();
+            System.out.println("Action : " + action);
+
+            String musique = matcher.group(2);
+            String auteur = matcher.group(3);
+
+            switch (action) {
+                case "joue":
+                    jouer(musique, auteur);
+                    break;
+                case "supprime":
+                    supprime(musique, auteur);
+                    break;
+                case "modifie":
+                    modifie(musique, auteur);
+                    break;
+                default:
+                    Log.e("ReflowFragment", "Action non reconnue : " + action);
+                    break;
+            }
+        } else {
+            Log.e("ReflowFragment", "L'action n'a pas été reconnue.");
+        }
+
+    }
+
+    private void modifie(String musique, String auteur) {
+        System.out.println("Musique : " + musique);
+        System.out.println("Auteur : " + auteur);
+    }
+
+    private void supprime(String musique, String auteur) {
+        System.out.println("Musique : " + musique);
+        System.out.println("Auteur : " + auteur);
+    }
+
+    private void jouer(String musique, String auteur) {
+        System.out.println("Musique : " + musique);
+        System.out.println("Auteur : " + auteur);
     }
 
     @Override
