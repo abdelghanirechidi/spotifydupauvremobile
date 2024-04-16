@@ -23,7 +23,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.spotifydupauvremobile.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
-    private static final int PERMISSIONS_REQUEST_CODE = 100;
     private AppBarConfiguration mAppBarConfiguration;
 
     @Override
@@ -61,38 +60,10 @@ public class MainActivity extends AppCompatActivity {
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
         }
 
-        checkPermissions();
+
     }
 
-    // Méthode pour vérifier et demander les autorisations
-    private void checkPermissions() {
-        // Vérifier si les autorisations sont déjà accordées
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // Demander les autorisations manquantes
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.RECORD_AUDIO,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    PERMISSIONS_REQUEST_CODE);
-        }
-    }
 
-    // Gestion de la réponse de la demande d'autorisation
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.length > 0 &&
-                    grantResults[0] == PackageManager.PERMISSION_GRANTED &&
-                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-
-            } else {
-                System.out.println("Les autorisations sont refusées");
-            }
-        }
-    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         boolean result = super.onCreateOptionsMenu(menu);

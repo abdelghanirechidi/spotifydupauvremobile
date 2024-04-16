@@ -2,6 +2,7 @@ package com.example.spotifydupauvremobile.ui.reflow;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -41,6 +42,8 @@ import com.google.cloud.speech.v1.SpeechClient;
 import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1.SpeechSettings;
 import com.google.protobuf.ByteString;
+import android.media.MediaRecorder;
+
 
 
 public class ReflowFragment extends Fragment {
@@ -49,7 +52,32 @@ public class ReflowFragment extends Fragment {
     private MediaRecorder mediaRecorder;
     private boolean isRecording = false;
     private SpeechClient speechClient;
+    private static final int RECORD_AUDIO_PERMISSION_CODE = 101;
 
+    // Méthode pour vérifier si la permission est accordée
+    private boolean checkRecordAudioPermission() {
+        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    // Méthode pour demander la permission
+    private void requestRecordAudioPermission() {
+        ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERMISSION_CODE);
+    }
+
+    // Surcharge pour gérer la réponse de l'utilisateur à la demande de permission
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == RECORD_AUDIO_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission accordée, démarrer l'enregistrement
+                startRecording();
+            } else {
+                // Permission refusée, afficher un message à l'utilisateur ou prendre d'autres mesures
+                Toast.makeText(getContext(), "Permission d'enregistrement audio refusée", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -64,12 +92,17 @@ public class ReflowFragment extends Fragment {
 
         Button buttonRecord = binding.buttonRecord;
         buttonRecord.setOnClickListener(v -> {
-            if (!isRecording) {
-                startRecording();
-                buttonRecord.setText("Arrêter");
+            if (checkRecordAudioPermission()) {
+                if (!isRecording) {
+                    startRecording();
+                    buttonRecord.setText("Arrêter");
+                } else {
+                    stopRecording();
+                    buttonRecord.setText("Enregister");
+                }
             } else {
-                stopRecording();
-                buttonRecord.setText("Enregister");
+                // Demander la permission à l'utilisateur
+                requestRecordAudioPermission();
             }
         });
 
@@ -99,24 +132,28 @@ public class ReflowFragment extends Fragment {
     }
 
     private void startRecording() {
-        String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.mp3";
-        System.out.println(outputFile);
+        String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.flac";
+        Log.d("OutputFile", outputFile);
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); // MP4 format
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); // AAC audio encoding
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS); // Output format for AAC
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); // AAC audio encoder
+        mediaRecorder.setAudioSamplingRate(44100); // Sample rate 44100 Hz
+        mediaRecorder.setAudioChannels(1); // Mono channel
+        mediaRecorder.setAudioEncodingBitRate(192000); // Bit rate 192 kbps
         mediaRecorder.setOutputFile(outputFile);
 
         try {
             mediaRecorder.prepare();
             mediaRecorder.start();
             isRecording = true;
-            Toast.makeText(getContext(), "L'enregistrement a commencé", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Recording started", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             Log.e("ReflowFragment", "Error starting recording: " + e.getMessage());
             Toast.makeText(getContext(), "Error starting recording", Toast.LENGTH_SHORT).show();
         }
     }
+
 
 
     private void stopRecording() {
@@ -126,9 +163,35 @@ public class ReflowFragment extends Fragment {
             mediaRecorder = null;
             isRecording = false;
             Toast.makeText(getContext(), "L'enregistrement est arrêté", Toast.LENGTH_SHORT).show();
+            //playRecordedAudio();
             convertSpeechToText();
         }
     }
+
+    private void playRecordedAudio() {
+        try {
+            // Chemin de l'audio enregistré
+            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.flac";
+            // Créer un lecteur de média
+            MediaPlayer mediaPlayer = new MediaPlayer();
+            mediaPlayer.setDataSource(outputFile);
+            mediaPlayer.prepare();
+            // Commencer la lecture
+            mediaPlayer.start();
+            // Gérer les exceptions
+            mediaPlayer.setOnErrorListener((mp, what, extra) -> {
+                Log.e("ReflowFragment", "Error playing recorded audio: " + what);
+                return false;
+            });
+            mediaPlayer.setOnCompletionListener(mp -> {
+                // Libérer le lecteur de média lorsqu'il a terminé la lecture
+                mediaPlayer.release();
+            });
+        } catch (IOException e) {
+            Log.e("ReflowFragment", "Error playing recorded audio: " + e.getMessage());
+        }
+    }
+
 
     private byte[] readFile(String filePath) throws IOException {
         File file = new File(filePath);
@@ -147,9 +210,9 @@ public class ReflowFragment extends Fragment {
                 return;
             }
 
-            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.mp3";
+            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.flac";
 
-            // Read the content of the MP3 audio file
+            // Read the content of the FLAC audio file
             byte[] audioBytes = readFile(outputFile);
             Log.e("bytes", Arrays.toString(audioBytes));
 
@@ -159,21 +222,24 @@ public class ReflowFragment extends Fragment {
             // Create recognition configuration
             RecognitionConfig config =
                     RecognitionConfig.newBuilder()
-                            .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
-                            .setSampleRateHertz(16000)
+                            .setEncoding(RecognitionConfig.AudioEncoding.FLAC)
+                            .setSampleRateHertz(44100) // Make sure to set the correct sample rate for your FLAC file
                             .setLanguageCode("fr-FR")
                             .build();
-            RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytesStr).build();
+            RecognitionAudio audio = RecognitionAudio.newBuilder()
+                    .setContent(audioBytesStr) // Use the ByteString created from audioBytes
+                    .build();
 
             // Perform speech recognition
             RecognizeResponse response = speechClient.recognize(config, audio);
             System.out.println(response.getResultsList());
             for (SpeechRecognitionResult result : response.getResultsList()) {
                 String transcript = result.getAlternatives(0).getTranscript();
+                System.out.println(transcript);
                 processTranscript(transcript);
             }
         } catch (IOException e) {
-            Log.e("ReflowFragment", "Error reading MP3 audio file: " + e.getMessage());
+            Log.e("ReflowFragment", "Error reading FLAC audio file: " + e.getMessage());
         }
     }
 
