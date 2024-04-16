@@ -1,5 +1,6 @@
 [versions]
 agp = "8.3.1"
+iceAndroid = "3.7.3"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
@@ -12,8 +13,11 @@ lifecycleLivedataKtx = "2.6.1"
 lifecycleViewmodelKtx = "2.6.1"
 navigationFragment = "2.6.0"
 navigationUi = "2.6.0"
+guava = "33.1.0-jre"
+google = "5"
 
 [libraries]
+ice-android = { module = "com.zeroc:ice-android", version.ref = "iceAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -26,6 +30,8 @@ lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-lived
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
 navigation-fragment = { group = "androidx.navigation", name = "navigation-fragment", version.ref = "navigationFragment" }
 navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version.ref = "navigationUi" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+google = { group = "com.google", name = "google", version.ref = "google" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
