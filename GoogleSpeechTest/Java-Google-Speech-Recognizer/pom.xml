@@ -25,14 +25,12 @@
 	</repositories>
 
 	<dependencies>
-		<!-- <dependency> <groupId>com.github.lkuza2</groupId> <artifactId>java-speech-api</artifactId> 
-			<version>v2.02</version> </dependency> -->
+
 		<dependency>
 			<groupId>com.github.goxr3plus</groupId>
 			<artifactId>java-google-speech-api</artifactId>
 			<version>V2.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
@@ -46,9 +44,4 @@
 		</dependency>
 	</dependencies>
 
-	<name>Java Google Speech Recognizer</name>
-	<description>Made by GOXR3PLUS STUDIO based on  https://github.com/lkuza2/java-speech-api/</description>
-	<organization>
-		<name>GOXR3PLUS STUDIO</name>
-	</organization>
 </project>
