@@ -15,6 +15,7 @@ navigationFragment = "2.6.0"
 navigationUi = "2.6.0"
 guava = "33.1.0-jre"
 google = "5"
+tarsosdsp = "2.4-1"
 
 [libraries]
 ice-android = { module = "com.zeroc:ice-android", version.ref = "iceAndroid" }

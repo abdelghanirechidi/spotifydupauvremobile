@@ -2,6 +2,9 @@ package com.example.spotifydupauvremobile.ui.reflow;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -131,25 +134,25 @@ public class ReflowFragment extends Fragment {
 
         return root;
     }
-    private static final String TEMP_AUDIO_FILE = "temp.3gp";
 
+    private byte[] recordedAudioData;
 
     private void startRecording() {
-        String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.3gp"; // Utilisez l'extension .3gp pour le format audio 3GP
+        String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.wav";
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP); // Utiliser le format 3GP
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB); // Utiliser le codec AMR_NB pour le format 3GP
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setOutputFile(outputFile);
 
         try {
             mediaRecorder.prepare();
             mediaRecorder.start();
             isRecording = true;
-            Toast.makeText(getContext(), "Recording started", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Enregistrement démarré", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            Log.e("ReflowFragment", "Error starting recording: " + e.getMessage());
-            Toast.makeText(getContext(), "Error starting recording", Toast.LENGTH_SHORT).show();
+            Log.e("ReflowFragment", "Erreur de démarrage de l'enregistrement: " + e.getMessage());
+            Toast.makeText(getContext(), "Erreur de démarrage de l'enregistrement", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -160,33 +163,43 @@ public class ReflowFragment extends Fragment {
                 mediaRecorder.release();
                 mediaRecorder = null;
                 isRecording = false;
-                Toast.makeText(getContext(), "Recording stopped", Toast.LENGTH_SHORT).show();
-                playRecordedAudio();
-                convertSpeechToText();
+                Toast.makeText(getContext(), "Enregistrement arrêté", Toast.LENGTH_SHORT).show();
+
+                // Lire les bytes du fichier WAV enregistré
+                String filePath = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.wav";
+                recordedAudioData = readFileToByteArray(filePath);
+
+                // Passer les bytes au convertisseur
+                convertSpeechToText(recordedAudioData);
             } catch (Exception e) {
-                Log.e("ReflowFragment", "Error stopping recording: " + e.getMessage());
-                Toast.makeText(getContext(), "Error stopping recording", Toast.LENGTH_SHORT).show();
+                Log.e("ReflowFragment", "Erreur d'arrêt de l'enregistrement: " + e.getMessage());
+                Toast.makeText(getContext(), "Erreur d'arrêt de l'enregistrement", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
+
     private void playRecordedAudio() {
         try {
             // Chemin de l'audio enregistré
-            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.mp3";
+            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.wav";
+
             // Créer un lecteur de média
             MediaPlayer mediaPlayer = new MediaPlayer();
             mediaPlayer.setDataSource(outputFile);
             mediaPlayer.prepare();
+
             // Commencer la lecture
             mediaPlayer.start();
+
             // Gérer les exceptions
             mediaPlayer.setOnErrorListener((mp, what, extra) -> {
                 Log.e("ReflowFragment", "Error playing recorded audio: " + what);
                 return false;
             });
+
+            // Libérer le lecteur de média lorsqu'il a terminé la lecture
             mediaPlayer.setOnCompletionListener(mp -> {
-                // Libérer le lecteur de média lorsqu'il a terminé la lecture
                 mediaPlayer.release();
             });
         } catch (IOException e) {
@@ -195,36 +208,44 @@ public class ReflowFragment extends Fragment {
     }
 
 
+    // Méthode pour lire un fichier audio et le convertir en tableau de bytes
+    private byte[] readFileToByteArray(String filePath) throws IOException {
+        File file = new File(filePath);
+        byte[] bytes = new byte[(int) file.length()];
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(file);
+            fis.read(bytes);
+        } finally {
+            if (fis != null) {
+                fis.close();
+            }
+        }
+        return bytes;
+    }
 
-    private void convertSpeechToText() {
+    // Méthode pour convertir les bytes du fichier audio en texte
+    private void convertSpeechToText(byte[] audioData) {
         try {
             if (speechClient == null) {
                 Log.e("ReflowFragment", "SpeechClient is null. Cannot convert speech to text.");
                 return;
             }
 
-            // Chemin du fichier audio enregistré
-            String filePath = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.mp3";
-
-            // Lire le fichier audio enregistré en tant que tableau de bytes
-            byte[] audioData = readFileToByteArray(filePath);
-
-            // Convertir le fichier audio en mono
-            byte[] monoAudioData = convertToMono(audioData);
-
             // Créer un objet ByteString à partir des données audio
-            ByteString audioBytes = ByteString.copyFrom(monoAudioData);
+            ByteString audioBytes = ByteString.copyFrom(audioData);
 
             // Créer l'objet RecognitionAudio avec les données audio
             RecognitionAudio audio = RecognitionAudio.newBuilder()
                     .setContent(audioBytes)
                     .build();
+            System.out.println(audio);
 
             // Configuration de la reconnaissance vocale
             RecognitionConfig config = RecognitionConfig.newBuilder()
-                    .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16) // Utiliser l'encodage LINEAR16 pour le fichier audio
-                    .setSampleRateHertz(44100) // Le taux d'échantillonnage du fichier audio est de 44100 Hz
-                    .setLanguageCode("en-US") // Définir le code de langue selon vos besoins
+                    .setEncoding(RecognitionConfig.AudioEncoding.MP3)
+                    .setSampleRateHertz(44100)
+                    .setLanguageCode("fr-FR")
                     .build();
 
             // Effectuer la reconnaissance vocale avec l'API SpeechClient
@@ -234,34 +255,15 @@ public class ReflowFragment extends Fragment {
             // Traitement de la réponse
             for (SpeechRecognitionResult result : response.getResultsList()) {
                 String transcript = result.getAlternatives(0).getTranscript();
+                System.out.println(transcript);
                 Log.d("ReflowFragment", "Transcription : " + transcript);
                 processTranscript(transcript);
             }
-        } catch (IOException e) {
-            Log.e("ReflowFragment", "Error reading audio file: " + e.getMessage());
         } catch (Exception e) {
             Log.e("ReflowFragment", "Error converting speech to text: " + e.getMessage());
         }
     }
 
-    private byte[] readFileToByteArray(String filePath) throws IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return Files.readAllBytes(Paths.get(filePath));
-        }
-        return null;
-    }
-
-    private byte[] convertToMono(byte[] stereoAudioData) {
-        // Convertir les données audio stéréo en mono en sélectionnant un canal (gauche ou droite)
-        // Dans cet exemple, nous prenons simplement le canal gauche
-        byte[] monoAudioData = new byte[stereoAudioData.length / 2];
-        for (int i = 0, j = 0; i < stereoAudioData.length; i += 4) {
-            monoAudioData[j] = stereoAudioData[i];
-            monoAudioData[j + 1] = stereoAudioData[i + 1];
-            j += 2;
-        }
-        return monoAudioData;
-    }
 
     private void processTranscript(String transcript) {
         Pattern pattern = Pattern.compile("(\\w+)\\s(.*?)\\sde\\s(.*)");
@@ -286,6 +288,7 @@ public class ReflowFragment extends Fragment {
             Log.e("ReflowFragment", "L'action n'a pas été reconnue.");
         }
     }
+
     private void modifie(String musique, String auteur) {
         Log.d("ReflowFragment", "Modifie : Musique - " + musique + ", Auteur - " + auteur);
     }
