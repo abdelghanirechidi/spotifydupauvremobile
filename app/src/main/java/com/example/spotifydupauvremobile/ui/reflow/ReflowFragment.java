@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Exception;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -47,6 +48,8 @@ import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1.SpeechSettings;
 import com.google.protobuf.ByteString;
 import android.media.MediaRecorder;
+import com.example.spotifydupauvremobile.ui.reflow.MusicIce.*;
+import com.zeroc.Ice.*;
 
 
 
@@ -170,6 +173,7 @@ public class ReflowFragment extends Fragment {
                 recordedAudioData = readFileToByteArray(filePath);
 
                 // Passer les bytes au convertisseur
+                //playRecordedAudio();
                 convertSpeechToText(recordedAudioData);
             } catch (Exception e) {
                 Log.e("ReflowFragment", "Erreur d'arrêt de l'enregistrement: " + e.getMessage());
@@ -294,8 +298,36 @@ public class ReflowFragment extends Fragment {
     }
 
     private void supprime(String musique, String auteur) {
-        Log.d("ReflowFragment", "Supprime : Musique - " + musique + ", Auteur - " + auteur);
+        Communicator communicator = null;
+        try {
+            communicator = com.zeroc.Ice.Util.initialize();
+            String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+            Log.d("Proxy String", proxyStr);
+
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
+            if (base == null) {
+                Log.e("Error", "Invalid proxy");
+                return;
+            }
+
+            MusicPrx musicService = MusicPrx.checkedCast(base);
+            if (musicService == null) {
+                Log.e("Error", "Invalid MusicPrx");
+                return;
+            }
+
+            musicService.supprimerMusique(musique);
+        } catch (com.zeroc.Ice.LocalException e) {
+            Log.e("Local Exception", e.getMessage());
+        } catch (Exception e) {
+            Log.e("Exception", e.getMessage());
+        } finally {
+            if (communicator != null) {
+                communicator.destroy();
+            }
+        }
     }
+
 
     private void jouer(String musique, String auteur) {
         Log.d("ReflowFragment", "Joue : Musique - " + musique + ", Auteur - " + auteur);

@@ -6,7 +6,6 @@ android {
     namespace = "com.example.spotifydupauvremobile"
     compileSdk = 34
 
-
     defaultConfig {
         applicationId = "com.example.spotifydupauvremobile"
         minSdk = 24
@@ -55,6 +54,7 @@ dependencies {
     //implementation(files("C:\\Users\\Utilisateur\\Desktop\\Etude\\M1\\S2\\spotifydupauvremobile\\jar_files"))
     //implementation(fileTree(mapOf("dir" to "C:\\Users\\Utilisateur\\Desktop\\Etude\\M1\\S2\\spotifydupauvremobile\\jar_files", "include" to listOf<String>("*.aar", "*.jar"), "exclude" to listOf<String>())))
     implementation("com.google.cloud:google-cloud-speech:4.36.0")
+    implementation(libs.ice)
 
     //implementation(libs.ice.android)
 

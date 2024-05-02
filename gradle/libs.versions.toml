@@ -16,6 +16,7 @@ navigationUi = "2.6.0"
 guava = "33.1.0-jre"
 google = "5"
 tarsosdsp = "2.4-1"
+ice = "3.7.10"
 
 [libraries]
 ice-android = { module = "com.zeroc:ice-android", version.ref = "iceAndroid" }
@@ -33,6 +34,7 @@ navigation-fragment = { group = "androidx.navigation", name = "navigation-fragme
 navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version.ref = "navigationUi" }
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 google = { group = "com.google", name = "google", version.ref = "google" }
+ice = { group = "com.zeroc", name = "ice", version.ref = "ice" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
