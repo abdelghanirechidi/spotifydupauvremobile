@@ -55,6 +55,7 @@ dependencies {
     //implementation(fileTree(mapOf("dir" to "C:\\Users\\Utilisateur\\Desktop\\Etude\\M1\\S2\\spotifydupauvremobile\\jar_files", "include" to listOf<String>("*.aar", "*.jar"), "exclude" to listOf<String>())))
     implementation("com.google.cloud:google-cloud-speech:4.36.0")
     implementation(libs.ice)
+    implementation("com.google.android.exoplayer:exoplayer:2.19.1")
 
     //implementation(libs.ice.android)
 

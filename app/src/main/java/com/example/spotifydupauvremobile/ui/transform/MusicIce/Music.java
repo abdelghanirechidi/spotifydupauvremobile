@@ -13,7 +13,7 @@
 // </auto-generated>
 //
 
-package com.example.spotifydupauvremobile.ui.reflow.MusicIce;
+package com.example.spotifydupauvremobile.ui.transform.MusicIce;
 
 public interface Music extends com.zeroc.Ice.Object
 {

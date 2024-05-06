@@ -2,10 +2,12 @@ package com.example.spotifydupauvremobile.ui.reflow;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -37,6 +39,11 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
@@ -50,6 +57,8 @@ import com.google.protobuf.ByteString;
 import android.media.MediaRecorder;
 import com.example.spotifydupauvremobile.ui.reflow.MusicIce.*;
 import com.zeroc.Ice.*;
+import android.media.MediaPlayer;
+
 
 
 
@@ -59,6 +68,7 @@ public class ReflowFragment extends Fragment {
     private MediaRecorder mediaRecorder;
     private boolean isRecording = false;
     private SpeechClient speechClient;
+    MediaPlayer mediaPlayer;
     private static final int RECORD_AUDIO_PERMISSION_CODE = 101;
 
     // Méthode pour vérifier si la permission est accordée
@@ -245,7 +255,7 @@ public class ReflowFragment extends Fragment {
                     .build();
             System.out.println(audio);
 
-            // Configuration de la reconnaissance vocale
+            // Configuration de la reconnaissance vocale (MP3 ça marche)
             RecognitionConfig config = RecognitionConfig.newBuilder()
                     .setEncoding(RecognitionConfig.AudioEncoding.MP3)
                     .setSampleRateHertz(44100)
@@ -259,7 +269,6 @@ public class ReflowFragment extends Fragment {
             // Traitement de la réponse
             for (SpeechRecognitionResult result : response.getResultsList()) {
                 String transcript = result.getAlternatives(0).getTranscript();
-                System.out.println(transcript);
                 Log.d("ReflowFragment", "Transcription : " + transcript);
                 processTranscript(transcript);
             }
@@ -302,7 +311,6 @@ public class ReflowFragment extends Fragment {
         try {
             communicator = com.zeroc.Ice.Util.initialize();
             String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
-            Log.d("Proxy String", proxyStr);
 
             com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
             if (base == null) {
@@ -330,8 +338,64 @@ public class ReflowFragment extends Fragment {
 
 
     private void jouer(String musique, String auteur) {
-        Log.d("ReflowFragment", "Joue : Musique - " + musique + ", Auteur - " + auteur);
+        Communicator communicator = null;
+        try {
+            communicator = Util.initialize();
+            String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
+            if (base == null) {
+                Log.e("Error", "Invalid proxy");
+                return;
+            }
+
+            MusicPrx musicService = MusicPrx.checkedCast(base);
+            if (musicService == null) {
+                Log.e("Error", "Invalid MusicPrx");
+                return;
+            }
+
+            // Lecture de la musique via Ice
+            musicService.play("TheLastOfUs");
+
+            String audioUrl = "http://192.168.1.62:8000/stream.mp3";
+
+            // Initialisation de MediaPlayer
+            MediaPlayer mediaPlayer = new MediaPlayer();
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+
+            // Configuration de la source de données
+            mediaPlayer.setDataSource(audioUrl);
+
+            // Gestionnaire de préparation du lecteur
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mediaPlayer.start();
+                }
+            });
+
+            // Gestionnaire d'erreur
+            mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer mp, int what, int extra) {
+                    Log.e("MediaPlayer", "Error: " + what + ", Extra: " + extra);
+                    return false;
+                }
+            });
+
+            // Préparation et démarrage du lecteur
+            mediaPlayer.prepareAsync();
+
+        } catch (Exception e) {
+            Log.e("Exception", e.getMessage());
+        } finally {
+            if (communicator != null) {
+                communicator.destroy();
+            }
+        }
     }
+
 
     @Override
     public void onDestroyView() {
