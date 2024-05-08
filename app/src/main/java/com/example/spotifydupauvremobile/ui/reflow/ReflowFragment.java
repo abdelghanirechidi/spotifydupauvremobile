@@ -82,6 +82,14 @@ public class ReflowFragment extends Fragment {
     MediaPlayer mediaPlayer;
     private static final int RECORD_AUDIO_PERMISSION_CODE = 101;
 
+    private static final int SAMPLE_RATE = 44100;
+    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO;
+    private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+    private static final int BUFFER_SIZE = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
+
+    private AudioTrack audioTrack;
+    private boolean isPlaying = false;
+
     // Méthode pour vérifier si la permission est accordée
     private boolean checkRecordAudioPermission() {
         return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
@@ -195,8 +203,8 @@ public class ReflowFragment extends Fragment {
 
                 // Passer les bytes au convertisseur
                 //playRecordedAudio();
-                //convertSpeechToText(recordedAudioData);
-                jouer("matcher.group(2)", "matcher.group(3)");
+                convertSpeechToText(recordedAudioData);
+                //jouer("matcher.group(2)", "matcher.group(3)");
             } catch (Exception e) {
                 Log.e("ReflowFragment", "Erreur d'arrêt de l'enregistrement: " + e.getMessage());
                 //Toast.makeText(getContext(), "Erreur d'arrêt de l'enregistrement", Toast.LENGTH_SHORT).show();
@@ -349,13 +357,6 @@ public class ReflowFragment extends Fragment {
     }
 
 
-    private static final int SAMPLE_RATE = 44100;
-    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO;
-    private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
-    private static final int BUFFER_SIZE = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
-
-    private AudioTrack audioTrack;
-    private boolean isPlaying = false;
     private void jouer(String musique, String auteur) {
         Communicator communicator = null;
         try {
@@ -375,7 +376,7 @@ public class ReflowFragment extends Fragment {
             }
 
             // Lecture de la musique via Ice
-            musicService.play("TheLastOfUs");
+            musicService.play(musique);
 
             // URL du flux audio à écouter en streaming
             String audioUrl = "http://192.168.1.62:8080/stream.mp3";

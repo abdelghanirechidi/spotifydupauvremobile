@@ -73,12 +73,15 @@ public class TransformFragment extends Fragment {
 
     private FragmentTransformBinding binding;
 
+    Communicator communicator;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         TransformViewModel transformViewModel = new ViewModelProvider(this).get(TransformViewModel.class);
         binding = FragmentTransformBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        communicator = Util.initialize();
         RecyclerView recyclerView = binding.recyclerviewTransform;
         recyclerView.setAdapter(new TransformAdapter());
         transformViewModel.getTexts().observe(getViewLifecycleOwner(), strings -> {
@@ -91,6 +94,7 @@ public class TransformFragment extends Fragment {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
         }
+
 
         binding.fabAddItem.setOnClickListener(v -> openFilePicker());
 
@@ -124,7 +128,9 @@ public class TransformFragment extends Fragment {
                         title = fileName;
                         author = "Inconnu";
                     }
-                    playAudio(audioBytes);
+                    //playAudio(audioBytes);
+                    envoyerFichierAudioEnChunks(uri,title,author);
+                    //envoyerChunkAuServeur(title, author, audioBytes);
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -133,6 +139,67 @@ public class TransformFragment extends Fragment {
             }
         }
     }
+
+
+    // Fonction pour envoyer un fichier audio en chunks au serveur
+    public void envoyerFichierAudioEnChunks(Uri uri, String titre, String auteur) {
+        try {
+            byte[] audioBytes = readBytesFromUri(uri);
+            int chunkSize = 8192; // Taille du chunk en octets
+            int offset = 0;
+            while (offset < audioBytes.length) {
+                int length = Math.min(chunkSize, audioBytes.length - offset);
+                byte[] chunk = Arrays.copyOfRange(audioBytes, offset, offset + length);
+                envoyerChunkAuServeur(titre, auteur, chunk);
+                offset += length;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void envoyerChunkAuServeur(String titre, String auteur, byte[] chunk) {
+
+        try {
+
+            String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+
+            ObjectPrx base = communicator.stringToProxy(proxyStr);
+            if (base == null) {
+                Log.e("Error", "Invalid proxy");
+                return;
+            }
+
+            MusicPrx musicService = MusicPrx.checkedCast(base);
+            if (musicService == null) {
+                Log.e("Error", "Invalid MusicPrx");
+                return;
+            }
+
+            String chunkBase64 = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                chunkBase64 = Base64.getEncoder().encodeToString(chunk);
+            }
+            if (chunkBase64 == null) {
+                Log.e("Error", "chunkBase64 is null");
+                return;
+            }
+            {
+                CompletableFuture<Void> future = musicService.envoyerMusiqueAsync(titre, auteur, chunkBase64);
+                future.exceptionally(ex -> {
+                    ex.printStackTrace();
+                    return null;
+                });
+            }
+
+        } catch (LocalException e) {
+            Log.e("Local Exception", e.getMessage());
+        } catch (Exception e) {
+            Log.e("Exception", e.getMessage());
+        }
+    }
+
+
 
     private String getFileNameFromUri(Uri uri) {
         String fileName = null;
