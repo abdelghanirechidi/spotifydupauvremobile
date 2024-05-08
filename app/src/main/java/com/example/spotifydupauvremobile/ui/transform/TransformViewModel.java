@@ -1,6 +1,9 @@
 package com.example.spotifydupauvremobile.ui.transform;
 
+import android.app.AlertDialog;
+import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -47,7 +50,6 @@ public class TransformViewModel extends ViewModel {
                     }
 
                     String[] musiques = musicService.listerMusiques();
-
                     List<String> musiquesList = new ArrayList<>();
                     for (String musique : musiques) {
                         musiquesList.add(musique);
@@ -66,5 +68,6 @@ public class TransformViewModel extends ViewModel {
             }
         }).start();
     }
+
 
 }

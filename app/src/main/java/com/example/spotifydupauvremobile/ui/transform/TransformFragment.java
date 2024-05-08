@@ -3,6 +3,7 @@ package com.example.spotifydupauvremobile.ui.transform;
 import static kotlin.io.ByteStreamsKt.readBytes;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -22,6 +23,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -273,7 +275,7 @@ public class TransformFragment extends Fragment {
         binding = null;
     }
 
-    private static class TransformAdapter extends ListAdapter<String, TransformViewHolder> {
+    private class TransformAdapter extends ListAdapter<String, TransformViewHolder> {
 
         private final List<Integer> drawables = Arrays.asList(
                 R.drawable.avatar_1,
@@ -315,12 +317,58 @@ public class TransformFragment extends Fragment {
         }
 
         @Override
-        public void onBindViewHolder(@NonNull TransformViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull TransformViewHolder holder, @SuppressLint("RecyclerView") int position) {
             holder.textView.setText(getItem(position));
             holder.imageView.setImageDrawable(
                     ResourcesCompat.getDrawable(holder.imageView.getResources(),
                             drawables.get(position),
                             null));
+
+            holder.buttonDelete.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String itemText = getItem(position);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Communicator communicator = null;
+                            try {
+                                communicator = com.zeroc.Ice.Util.initialize();
+                                if (communicator != null) {
+                                    String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+                                    com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
+                                    if (base == null) {
+                                        Log.e("Error", "Invalid proxy");
+                                        return;
+                                    }
+
+                                    MusicPrx musicService = MusicPrx.checkedCast(base);
+                                    if (musicService == null) {
+                                        Log.e("Error", "Invalid MusicPrx");
+                                        return;
+                                    }
+
+                                    musicService.supprimerMusique(itemText);
+
+                                    Intent intent = requireActivity().getIntent();
+                                    requireActivity().finish();
+                                    requireActivity().startActivity(intent);
+
+                                }
+                            } catch (com.zeroc.Ice.LocalException e) {
+                                Log.e("Local Exception", e.getMessage());
+                            } catch (Exception e) {
+                                Log.e("Exception", e.getMessage());
+                            } finally {
+                                if (communicator != null) {
+                                    communicator.destroy();
+                                }
+                            }
+                        }
+                    }).start();
+                }
+            });
+
         }
     }
 
@@ -328,11 +376,14 @@ public class TransformFragment extends Fragment {
 
         private final ImageView imageView;
         private final TextView textView;
+        private final ImageButton buttonDelete;
 
         public TransformViewHolder(ItemTransformBinding binding) {
             super(binding.getRoot());
             imageView = binding.imageViewItemTransform;
             textView = binding.textViewItemTransform;
+            buttonDelete = binding.buttonDelete;
+
         }
     }
 }

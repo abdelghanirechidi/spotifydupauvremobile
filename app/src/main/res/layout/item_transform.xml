@@ -25,4 +25,19 @@
         app:layout_constraintStart_toEndOf="@id/image_view_item_transform"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="This is item # xx" />
+
+    <ImageButton
+        android:id="@+id/button_delete"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_delete"
+        android:background="@null"
+        app:layout_constraintBottom_toBottomOf="@id/text_view_item_transform"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/text_view_item_transform"
+        app:layout_constraintTop_toTopOf="@id/text_view_item_transform"/>
+
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>
