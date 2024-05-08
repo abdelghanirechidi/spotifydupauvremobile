@@ -1,7 +1,9 @@
 package com.example.spotifydupauvremobile.ui.reflow;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -10,6 +12,9 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,25 +27,31 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.Player;
 
 import com.example.spotifydupauvremobile.R;
 import com.example.spotifydupauvremobile.databinding.FragmentReflowBinding;
 import android.media.MediaRecorder;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Exception;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -184,10 +195,11 @@ public class ReflowFragment extends Fragment {
 
                 // Passer les bytes au convertisseur
                 //playRecordedAudio();
-                convertSpeechToText(recordedAudioData);
+                //convertSpeechToText(recordedAudioData);
+                jouer("matcher.group(2)", "matcher.group(3)");
             } catch (Exception e) {
                 Log.e("ReflowFragment", "Erreur d'arrêt de l'enregistrement: " + e.getMessage());
-                Toast.makeText(getContext(), "Erreur d'arrêt de l'enregistrement", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getContext(), "Erreur d'arrêt de l'enregistrement", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -337,6 +349,13 @@ public class ReflowFragment extends Fragment {
     }
 
 
+    private static final int SAMPLE_RATE = 44100;
+    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO;
+    private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+    private static final int BUFFER_SIZE = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
+
+    private AudioTrack audioTrack;
+    private boolean isPlaying = false;
     private void jouer(String musique, String auteur) {
         Communicator communicator = null;
         try {
@@ -358,34 +377,37 @@ public class ReflowFragment extends Fragment {
             // Lecture de la musique via Ice
             musicService.play("TheLastOfUs");
 
-            String audioUrl = "http://192.168.1.62:8000/stream.mp3";
+            // URL du flux audio à écouter en streaming
+            String audioUrl = "http://192.168.1.62:8080/stream.mp3";
 
-            // Initialisation de MediaPlayer
-            MediaPlayer mediaPlayer = new MediaPlayer();
-            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            // Obtenez le contexte à partir de l'activité parente
+            Context context = getActivity();
 
-            // Configuration de la source de données
-            mediaPlayer.setDataSource(audioUrl);
+            // Vérifiez si le contexte est disponible
+            if (context != null) {
+                // Création d'un SimpleExoPlayer avec le contexte de l'activité
+                SimpleExoPlayer exoPlayer = new SimpleExoPlayer.Builder(context).build();
 
-            // Gestionnaire de préparation du lecteur
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    mediaPlayer.start();
-                }
-            });
+                // Création de la source de média
+                MediaItem mediaItem = MediaItem.fromUri(audioUrl);
 
-            // Gestionnaire d'erreur
-            mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                @Override
-                public boolean onError(MediaPlayer mp, int what, int extra) {
-                    Log.e("MediaPlayer", "Error: " + what + ", Extra: " + extra);
-                    return false;
-                }
-            });
+                // Préparation du lecteur
+                exoPlayer.setMediaItem(mediaItem);
+                exoPlayer.prepare();
 
-            // Préparation et démarrage du lecteur
-            mediaPlayer.prepareAsync();
+                // Ajoutez le lecteur à la vue du fragment
+                PlayerView playerView = requireView().findViewById(R.id.playerView);
+                playerView.setPlayer(exoPlayer);
+            } else {
+                Log.e("ReflowFragment", "Context is null. Unable to create ExoPlayer.");
+                Toast.makeText(getContext(), "Une erreur s'est produite lors de la lecture du média.", Toast.LENGTH_SHORT).show();
+            }
+            SpannableString spannableString = new SpannableString("The Last Of Us est entrain d'être jouée !");
+            ForegroundColorSpan colorSpan = new ForegroundColorSpan(Color.BLUE); // Par exemple, couleur bleue
+            spannableString.setSpan(colorSpan, 0, spannableString.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            Toast.makeText(getContext(), spannableString, Toast.LENGTH_SHORT).show();
+
+
 
         } catch (Exception e) {
             Log.e("Exception", e.getMessage());
@@ -395,7 +417,6 @@ public class ReflowFragment extends Fragment {
             }
         }
     }
-
 
     @Override
     public void onDestroyView() {
@@ -407,6 +428,8 @@ public class ReflowFragment extends Fragment {
                 Log.e("ReflowFragment", "Erreur lors de la fermeture du SpeechClient: " + e.getMessage());
             }
         }
+
+
         binding = null;
     }
 }

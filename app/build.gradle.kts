@@ -56,6 +56,7 @@ dependencies {
     implementation("com.google.cloud:google-cloud-speech:4.36.0")
     implementation(libs.ice)
     implementation("com.google.android.exoplayer:exoplayer:2.19.1")
+    implementation(libs.media3.common)
 
     //implementation(libs.ice.android)
 
