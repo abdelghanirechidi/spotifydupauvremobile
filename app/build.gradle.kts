@@ -57,6 +57,9 @@ dependencies {
     implementation(libs.ice)
     implementation("com.google.android.exoplayer:exoplayer:2.19.1")
     implementation(libs.media3.common)
+    implementation(libs.retrofit)
+    implementation(libs.okhttp)
+    implementation(libs.picasso)
 
     //implementation(libs.ice.android)
 

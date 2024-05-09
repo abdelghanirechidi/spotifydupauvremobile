@@ -48,18 +48,26 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 import com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.squareup.picasso.Picasso;
 import com.zeroc.Ice.Communicator;
 import com.zeroc.Ice.LocalException;
 import com.zeroc.Ice.ObjectPrx;
 import com.zeroc.Ice.SocketException;
 import com.zeroc.Ice.Util;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -132,6 +140,10 @@ public class TransformFragment extends Fragment {
                     }
                     //playAudio(audioBytes);
                     envoyerFichierAudioEnChunks(uri,title,author);
+
+                    Intent intent = requireActivity().getIntent();
+                    requireActivity().finish();
+                    requireActivity().startActivity(intent);
                     //envoyerChunkAuServeur(title, author, audioBytes);
 
                 } catch (IOException e) {
@@ -319,10 +331,14 @@ public class TransformFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull TransformViewHolder holder, @SuppressLint("RecyclerView") int position) {
             holder.textView.setText(getItem(position));
+            /*
             holder.imageView.setImageDrawable(
                     ResourcesCompat.getDrawable(holder.imageView.getResources(),
                             drawables.get(position),
-                            null));
+                            null));*/
+
+            //System.out.println(getItem(position));
+            loadImageFromApi(getItem(position), holder.imageView);
 
             holder.buttonDelete.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -370,6 +386,73 @@ public class TransformFragment extends Fragment {
             });
 
         }
+
+        private void loadImageFromApi(String item, ImageView imageView) {
+            new AsyncTask<Void, Void, String>() {
+                @Override
+                protected String doInBackground(Void... voids) {
+                    // Appeler la méthode de recherche d'image de l'API Google Custom Search
+                    return searchImageApi(item, "AIzaSyCfE_SiSiOcxnvE3NSGNNGCtxdMeBY7KxQ", "343fdfbc420124731");
+                }
+
+                @Override
+                protected void onPostExecute(String imageUrl) {
+                    // Charger et afficher l'image dans l'ImageView avec Picasso
+                    if (imageUrl != null && !imageUrl.isEmpty()) {
+                        Picasso.get()
+                                .load(imageUrl)
+                                .resize(300, 300)
+                                .centerCrop()
+                                .into(imageView);
+                    } else {
+                        // Si aucune image n'est trouvée, utilisez une image de placeholder
+                        imageView.setImageDrawable(ResourcesCompat.getDrawable(imageView.getResources(), R.drawable.placeholder_image, null));
+                    }
+                }
+            }.execute();
+        }
+
+        public String searchImageApi(String musicTitle, String apiKey, String searchEngineId) {
+            try {
+                // Construire l'URL de requête
+                musicTitle = musicTitle + " cover";
+                String apiUrl = "https://www.googleapis.com/customsearch/v1" +
+                        "?key=" + apiKey +
+                        "&cx=" + searchEngineId +
+                        "&q=" + musicTitle +
+                        "&searchType=image" +
+                        "&num=1";
+
+                System.out.println(apiUrl);
+
+                // Ouvrir la connexion
+                URL url = new URL(apiUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+
+                // Lire la réponse
+                Scanner scanner = new Scanner(conn.getInputStream());
+                StringBuilder responseBuilder = new StringBuilder();
+                while (scanner.hasNextLine()) {
+                    responseBuilder.append(scanner.nextLine());
+                }
+                scanner.close();
+
+                // Analyser la réponse JSON
+                JSONObject jsonResponse = new JSONObject(responseBuilder.toString());
+                JSONArray items = jsonResponse.getJSONArray("items");
+                if (items.length() > 0) {
+                    JSONObject firstItem = items.getJSONObject(0);
+                    return firstItem.getString("link");
+                } else {
+                    Log.e("ImageSearcher", "Aucune image trouvée pour : " + musicTitle);
+                    return null;
+                }
+            } catch (IOException | JSONException e) {
+                Log.e("ImageSearcher", "Erreur lors de la recherche d'image : " + e.getMessage());
+                return null;
+            }
+        }
     }
 
     private static class TransformViewHolder extends RecyclerView.ViewHolder {
@@ -383,6 +466,9 @@ public class TransformFragment extends Fragment {
             imageView = binding.imageViewItemTransform;
             textView = binding.textViewItemTransform;
             buttonDelete = binding.buttonDelete;
+
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            imageView.setAdjustViewBounds(true);
 
         }
     }

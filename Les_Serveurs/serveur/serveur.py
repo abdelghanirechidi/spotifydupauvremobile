@@ -69,14 +69,15 @@ class MusicI(MusicIce.Music):
     
     # Fonction permettant de supprimer une musique
     def supprimerMusique(self, titre, current=None):
-        print(f"Suppression de musique : {titre}")
-        def task():
-            try:
-                self.cursor.execute("DELETE FROM musics WHERE title = ?", (titre,))
-            except sqlite3.Error as e:
-                print("Erreur lors de la suppression de la musique :", e)
-        self.execute_task(task)
-        return True
+            print(f"Suppression de musique : {titre}")
+            def task():
+                try:
+                    self.cursor.execute("DELETE FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
+                    self.connection.commit()
+                except sqlite3.Error as e:
+                    print("Erreur lors de la suppression de la musique :", e)
+            self.execute_task(task)
+            return True
     
     # Fonction permettant de modifier une musique dans la base de données
     def modifierMusique(self, titre, nouveauTitre, nouvelAuteur, nouveauFichierAudio, current=None):
@@ -130,11 +131,10 @@ class MusicI(MusicIce.Music):
         print(f"Lecture de la musique : {titre}")
         def task():
             try:
-                connection = sqlite3.connect('music_database.db')
-                cursor = connection.cursor()
-
-                cursor.execute("SELECT * FROM musics WHERE title = ?", (titre,))
-                result = cursor.fetchone()
+                self.stop()
+                # Recherche de la musique avec une correspondance insensible à la casse
+                self.cursor.execute("SELECT * FROM musics WHERE LOWER(title) LIKE ?", ('%' + titre.lower() + '%',))
+                result = self.cursor.fetchone()
 
                 if result:
                     id, title, author, audio_file = result
@@ -151,16 +151,35 @@ class MusicI(MusicIce.Music):
                     self.player.play()
 
                 else:
-                    print(f"Aucune musique trouvée avec le titre : {titre}")
+                    # Convertir le titre transcrit en un format compatible avec la recherche dans la base de données
+                    titre_formate = titre.lower().replace(" ", "")
 
-                # Fermer la connexion
-                cursor.close()
-                connection.close()
+                    # Recherche dans la base de données avec le titre formaté
+                    self.cursor.execute("SELECT * FROM musics WHERE REPLACE(LOWER(title), ' ', '') LIKE ?", ('%' + titre_formate + '%',))
+                    result = self.cursor.fetchone()
+
+                    if result:
+                        id, title, author, audio_file = result
+                        print(f"Musique trouvée : {title} - {author} - {audio_file}")
+
+                        # Charger le flux audio
+                        media = self.instance.media_new(audio_file)
+
+                        # Configurer le flux audio
+                        media.add_option(f":sout=#transcode{{acodec=mp3,ab=128,channels=2,samplerate=44100}}:http{{mux=mp3,dst=:8080/stream.mp3}}")
+                        self.player.set_media(media)
+
+                        # Démarrer la lecture
+                        self.player.play()
+
+                    else:
+                        print(f"Aucune musique trouvée avec le titre : {titre}")
 
             except sqlite3.Error as e:
                 print("Erreur lors de la lecture de la musique :", e)
-        task()
+        self.execute_task(task)
         return True
+
 
 
     # Fonction permettant d'arrêter la lecture de la musique

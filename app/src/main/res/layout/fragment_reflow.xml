@@ -19,31 +19,22 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:text="Cliquez sur le bouton pour enregistrer la voix" />
+        android:text="Quel action veux-tu réaliser ? (jouer/supprimer) " />
 
     <!-- Button -->
     <Button
         android:id="@+id/buttonRecord"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/mic_off"
+        android:textColor="@android:color/transparent"
         android:text="Enregistrer"
         app:layout_constraintTop_toBottomOf="@+id/text_reflow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- PlayerView -->
-    <com.google.android.exoplayer2.ui.PlayerView
-        android:id="@+id/playerView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintBottom_toTopOf="@id/guideline_bottom"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/buttonRecord"
-        app:use_controller="true"
-        app:default_artwork="@drawable/ic_launcher_foreground" />
+
 
     <!-- Guideline -->
     <androidx.constraintlayout.widget.Guideline

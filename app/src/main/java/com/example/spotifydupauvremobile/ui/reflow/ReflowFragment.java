@@ -1,16 +1,17 @@
 package com.example.spotifydupauvremobile.ui.reflow;
 
+import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Color;
-import android.media.AudioAttributes;
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
-import android.net.Uri;
-import android.os.Build;
+import android.media.MediaRecorder;
+import android.media.PlaybackParams;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -21,43 +22,23 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.media3.common.Player;
 
 import com.example.spotifydupauvremobile.R;
 import com.example.spotifydupauvremobile.databinding.FragmentReflowBinding;
-import android.media.MediaRecorder;
-import android.widget.Toast;
-
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.Exception;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.ui.PlayerView;
-import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.speech.v1.RecognitionAudio;
 import com.google.cloud.speech.v1.RecognitionConfig;
 import com.google.cloud.speech.v1.RecognizeResponse;
@@ -65,12 +46,26 @@ import com.google.cloud.speech.v1.SpeechClient;
 import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1.SpeechSettings;
 import com.google.protobuf.ByteString;
-import android.media.MediaRecorder;
-import com.example.spotifydupauvremobile.ui.reflow.MusicIce.*;
-import com.zeroc.Ice.*;
-import android.media.MediaPlayer;
+import com.zeroc.Ice.Communicator;
+import com.zeroc.Ice.Util;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 public class ReflowFragment extends Fragment {
@@ -132,9 +127,11 @@ public class ReflowFragment extends Fragment {
                 if (!isRecording) {
                     startRecording();
                     buttonRecord.setText("Arrêter");
+                    buttonRecord.setBackgroundResource(R.drawable.mic_on);
                 } else {
                     stopRecording();
                     buttonRecord.setText("Enregister");
+                    buttonRecord.setBackgroundResource(R.drawable.mic_off);
                 }
             } else {
                 // Demander la permission à l'utilisateur
@@ -181,7 +178,6 @@ public class ReflowFragment extends Fragment {
             mediaRecorder.prepare();
             mediaRecorder.start();
             isRecording = true;
-            Toast.makeText(getContext(), "Enregistrement démarré", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             Log.e("ReflowFragment", "Erreur de démarrage de l'enregistrement: " + e.getMessage());
             Toast.makeText(getContext(), "Erreur de démarrage de l'enregistrement", Toast.LENGTH_SHORT).show();
@@ -195,19 +191,15 @@ public class ReflowFragment extends Fragment {
                 mediaRecorder.release();
                 mediaRecorder = null;
                 isRecording = false;
-                Toast.makeText(getContext(), "Enregistrement arrêté", Toast.LENGTH_SHORT).show();
 
                 // Lire les bytes du fichier WAV enregistré
                 String filePath = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.wav";
                 recordedAudioData = readFileToByteArray(filePath);
 
-                // Passer les bytes au convertisseur
-                //playRecordedAudio();
                 convertSpeechToText(recordedAudioData);
-                //jouer("matcher.group(2)", "matcher.group(3)");
+
             } catch (Exception e) {
                 Log.e("ReflowFragment", "Erreur d'arrêt de l'enregistrement: " + e.getMessage());
-                //Toast.makeText(getContext(), "Erreur d'arrêt de l'enregistrement", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -215,29 +207,39 @@ public class ReflowFragment extends Fragment {
 
     private void playRecordedAudio() {
         try {
-            // Chemin de l'audio enregistré
-            String outputFile = getActivity().getExternalCacheDir().getAbsolutePath() + "/recording.wav";
-
-            // Créer un lecteur de média
+            int audioResourceId = getResources().getIdentifier("erreur", "raw", getActivity().getPackageName());
             MediaPlayer mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(outputFile);
-            mediaPlayer.prepare();
 
-            // Commencer la lecture
-            mediaPlayer.start();
+            AssetFileDescriptor afd = getResources().openRawResourceFd(audioResourceId);
+            if (afd != null) {
+                mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                afd.close();
 
-            // Gérer les exceptions
-            mediaPlayer.setOnErrorListener((mp, what, extra) -> {
-                Log.e("ReflowFragment", "Error playing recorded audio: " + what);
-                return false;
-            });
+                // Définir la vitesse de lecture sur la valeur par défaut (1.0f)
+                PlaybackParams params = new PlaybackParams();
+                params.setSpeed(1.0f);
+                mediaPlayer.setPlaybackParams(params);
 
-            // Libérer le lecteur de média lorsqu'il a terminé la lecture
-            mediaPlayer.setOnCompletionListener(mp -> {
-                mediaPlayer.release();
-            });
-        } catch (IOException e) {
+                mediaPlayer.setOnPreparedListener(mp -> {
+                    mediaPlayer.start();
+                });
+
+                mediaPlayer.setOnErrorListener((mp, what, extra) -> {
+                    Log.e("ReflowFragment", "Error playing recorded audio: " + what);
+                    return false;
+                });
+
+                mediaPlayer.setOnCompletionListener(mp -> {
+                    mediaPlayer.release();
+                });
+
+                mediaPlayer.prepareAsync(); // Préparation asynchrone
+            } else {
+                Log.e("ReflowFragment", "Error opening raw resource for MediaPlayer");
+            }
+        } catch (Exception e) {
             Log.e("ReflowFragment", "Error playing recorded audio: " + e.getMessage());
+            mediaPlayer.release();
         }
     }
 
@@ -297,33 +299,121 @@ public class ReflowFragment extends Fragment {
         }
     }
 
+    public void processTranscript(String transcript) {
+        OkHttpClient client = new OkHttpClient();
 
-    private void processTranscript(String transcript) {
-        Pattern pattern = Pattern.compile("(\\w+)\\s(.*?)\\sde\\s(.*)");
-        Matcher matcher = pattern.matcher(transcript);
-        if (matcher.find()) {
-            String action = matcher.group(1).toLowerCase();
-            switch (action) {
-                case "joue":
-                    jouer(matcher.group(2), matcher.group(3));
-                    break;
-                case "supprime":
-                    supprime(matcher.group(2), matcher.group(3));
-                    break;
-                case "modifie":
-                    modifie(matcher.group(2), matcher.group(3));
-                    break;
-                default:
-                    Log.e("ReflowFragment", "Action non reconnue : " + action);
-                    break;
+        MediaType mediaType = MediaType.parse("application/json");
+        RequestBody body = RequestBody.create(mediaType, "{\"transcript\": \"" + transcript + "\"}");
+
+        Request request = new Request.Builder()
+                .url("http://192.168.1.62:5000/analyze")
+                .post(body)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+                client.dispatcher().executorService().shutdown();
             }
-        } else {
-            Log.e("ReflowFragment", "L'action n'a pas été reconnue.");
-        }
-    }
 
-    private void modifie(String musique, String auteur) {
-        Log.d("ReflowFragment", "Modifie : Musique - " + musique + ", Auteur - " + auteur);
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    throw new IOException("Unexpected code " + response);
+                }
+                String responseBody = response.body().string();
+                try {
+                    JSONObject jsonResponse1 = new JSONObject(responseBody);
+                    String responseStatus = jsonResponse1.getString("response");
+                    System.out.println(responseStatus);
+                    if(responseStatus.equals("Action not detected")){
+                        playRecordedAudio();
+                    } else {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(responseBody);
+                            String a = jsonResponse.toString();
+                            String[] parts = a.split("\"response\":\"");
+                            String action = "";
+                            String titre = "";
+                            String artiste = "";
+                            if (parts.length > 1) {
+                                String responseMessage = parts[1];
+                                // Extraire l'action
+                                int actionStartIndex = responseMessage.indexOf("action: ");
+                                if (actionStartIndex != -1) {
+                                    int actionEndIndex = responseMessage.indexOf(", Music:");
+                                    if (actionEndIndex != -1) {
+                                        action = responseMessage.substring(actionStartIndex + "action: ".length(), actionEndIndex).trim();
+                                        System.out.println("Action: " + action);
+                                    }
+                                }
+                                // Extraire le titre et l'artiste
+                                int musicStartIndex = responseMessage.indexOf(", Music: ('");
+                                if (musicStartIndex != -1) {
+                                    int musicEndIndex = responseMessage.indexOf("')\"}");
+                                    if (musicEndIndex != -1) {
+                                        String musicDetails = responseMessage.substring(musicStartIndex + ", Music: ('".length(), musicEndIndex);
+                                        String[] musicParts = musicDetails.split("', '");
+                                        if (musicParts.length == 2) {
+                                            titre = musicParts[0];
+                                            artiste = musicParts[1];
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ("jouer".equals(action)) {
+                                if(!titre.equals("")){
+
+
+                                    jouer(titre, artiste);
+                                    View view = getView();
+                                    if (view != null) {
+                                        Snackbar.make(view, titre + " a été lancée !", Snackbar.LENGTH_LONG).show();
+                                    }
+
+                                }
+                                else{
+                                    requireActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(getContext(), "Veuillez préciser le nom de la musique", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+
+                                }
+                            } else if ("supprimer".equals(action)) {
+                                if(!titre.equals("")) {
+                                    supprime(titre, artiste);
+
+                                    View view = getView();
+                                    if (view != null) {
+                                        Snackbar.make(view, titre + " a été supprimée !", Snackbar.LENGTH_LONG).show();
+                                    }
+                                }
+                                else {
+                                    requireActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(getContext(), "Veuillez préciser le nom de la musique", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                                }
+                            }
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+                client.dispatcher().executorService().shutdown();
+            }
+        });
     }
 
     private void supprime(String musique, String auteur) {
@@ -356,7 +446,6 @@ public class ReflowFragment extends Fragment {
         }
     }
 
-
     private void jouer(String musique, String auteur) {
         Communicator communicator = null;
         try {
@@ -376,6 +465,7 @@ public class ReflowFragment extends Fragment {
             }
 
             // Lecture de la musique via Ice
+            musicService.stop();
             musicService.play(musique);
 
             // URL du flux audio à écouter en streaming
@@ -386,29 +476,31 @@ public class ReflowFragment extends Fragment {
 
             // Vérifiez si le contexte est disponible
             if (context != null) {
-                // Création d'un SimpleExoPlayer avec le contexte de l'activité
-                SimpleExoPlayer exoPlayer = new SimpleExoPlayer.Builder(context).build();
+                // Exécutez le code d'accès au lecteur sur le thread principal
+                requireActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // Création d'un SimpleExoPlayer avec le contexte de l'activité
+                            SimpleExoPlayer exoPlayer = new SimpleExoPlayer.Builder(context).build();
 
-                // Création de la source de média
-                MediaItem mediaItem = MediaItem.fromUri(audioUrl);
+                            // Création de la source de média
+                            MediaItem mediaItem = MediaItem.fromUri(audioUrl);
 
-                // Préparation du lecteur
-                exoPlayer.setMediaItem(mediaItem);
-                exoPlayer.prepare();
-
-                // Ajoutez le lecteur à la vue du fragment
-                PlayerView playerView = requireView().findViewById(R.id.playerView);
-                playerView.setPlayer(exoPlayer);
+                            // Préparation du lecteur
+                            exoPlayer.setMediaItem(mediaItem);
+                            exoPlayer.prepare();
+                            exoPlayer.setPlayWhenReady(true);
+                        } catch (Exception e) {
+                            Log.e("ReflowFragment", "Error creating ExoPlayer: " + e.getMessage());
+                            Toast.makeText(getContext(), "An error occurred while playing media.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
             } else {
                 Log.e("ReflowFragment", "Context is null. Unable to create ExoPlayer.");
-                Toast.makeText(getContext(), "Une erreur s'est produite lors de la lecture du média.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "An error occurred while playing media.", Toast.LENGTH_SHORT).show();
             }
-            SpannableString spannableString = new SpannableString("The Last Of Us est entrain d'être jouée !");
-            ForegroundColorSpan colorSpan = new ForegroundColorSpan(Color.BLUE); // Par exemple, couleur bleue
-            spannableString.setSpan(colorSpan, 0, spannableString.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            Toast.makeText(getContext(), spannableString, Toast.LENGTH_SHORT).show();
-
-
 
         } catch (Exception e) {
             Log.e("Exception", e.getMessage());
@@ -418,6 +510,7 @@ public class ReflowFragment extends Fragment {
             }
         }
     }
+
 
     @Override
     public void onDestroyView() {
