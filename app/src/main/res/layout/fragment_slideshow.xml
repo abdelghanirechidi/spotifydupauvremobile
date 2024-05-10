@@ -20,39 +20,35 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:text="Formulaire de modification" />
+        android:text="Modification" />
 
-    <!-- Champ de texte pour le titre -->
     <EditText
         android:id="@+id/editTextTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Titre de la musique"
+        android:hint="Titre de la musique actuel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/text_slideshow" />
 
-    <!-- Champ de texte pour l'artiste -->
     <EditText
         android:id="@+id/editTextArtist"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Artiste"
+        android:hint="Nouveau titre"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editTextTitle" />
 
-    <!-- Champ de texte pour l'album -->
     <EditText
         android:id="@+id/editTextAlbum"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Album"
+        android:hint="Nouvel auteur"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editTextArtist" />
 
-    <!-- Bouton de modification -->
     <Button
         android:id="@+id/buttonModify"
         android:layout_width="wrap_content"

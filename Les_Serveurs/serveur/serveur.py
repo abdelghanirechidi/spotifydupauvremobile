@@ -74,10 +74,10 @@ class MusicI(MusicIce.Music):
         def task():
             try:
                 # Récupérer le chemin du fichier depuis la base de données
-                self.cursor.execute("SELECT audio_file FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
+                self.cursor.execute("SELECT * FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
                 result = self.cursor.fetchone()
                 if result:
-                    chemin = result[0]
+                    chemin = result[3]
                     # Supprimer la musique de la base de données
                     self.cursor.execute("DELETE FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
                     self.connection.commit()
@@ -101,12 +101,32 @@ class MusicI(MusicIce.Music):
         print(f"Modification de musique : {titre} -> {nouveauTitre}")
         def task():
             try:
-                self.cursor.execute("UPDATE musics SET title = ?, author = ?, audio_file = ? WHERE title = ?",
-                                    (nouveauTitre, nouvelAuteur, nouveauFichierAudio, titre))
+                self.cursor.execute("SELECT * FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
+                result = self.cursor.fetchone()
+                ancienCheminFichier = result[3]
+                nouveauCheminFichier = "../disque_dur_serveur/" + nouveauFichierAudio
+                if os.path.exists(ancienCheminFichier):
+                    try:
+                        os.rename(ancienCheminFichier, nouveauCheminFichier)
+                        self.cursor.execute("UPDATE musics SET title = ?, author = ?, audio_file = ? WHERE title = ?",
+                                            (nouveauTitre, nouvelAuteur, nouveauCheminFichier, titre))
+                        self.connection.commit()
+                        print("Musique modifiée avec succès !")
+                        return True
+                    except sqlite3.Error as e:
+                        print("Erreur lors de la modification de la musique dans la base de données :", e)
+                        return False
+                    except OSError as e:
+                        print("Erreur lors de la modification du fichier audio :", e)
+                        return False
+                else:
+                    print("Le fichier audio correspondant à la musique n'a pas été trouvé.")
+                    return False
+
             except sqlite3.Error as e:
-                print("Erreur lors de la modification de la musique :", e)
+                print("Erreur lors de la suppression de la musique :", e)
         self.execute_task(task)
-        return True  
+
     
     # Fonction permettant d'envoyer une musique
     def envoyerMusique(self, nomFichier, auteur,  chunk, current=None):

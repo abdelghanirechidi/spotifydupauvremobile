@@ -24,7 +24,9 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/image_view_item_transform"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="This is item # xx" />
+        tools:text="This is item # xx"
+        android:textSize="11sp"
+        />
 
     <ImageButton
         android:id="@+id/button_play"

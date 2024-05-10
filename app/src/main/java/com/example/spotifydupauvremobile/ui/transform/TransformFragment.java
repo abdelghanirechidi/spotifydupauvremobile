@@ -3,6 +3,8 @@ package com.example.spotifydupauvremobile.ui.transform;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -333,6 +335,22 @@ public class TransformFragment extends Fragment {
 
             holder.textView.setText(getItem(position));
 
+            holder.textView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View view) {
+                    String musiqueName = holder.textView.getText().toString();
+
+                    ClipboardManager clipboardManager = (ClipboardManager) view.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("Nom de la musique", musiqueName);
+                    clipboardManager.setPrimaryClip(clip);
+
+                    Toast.makeText(view.getContext(), "Nom de la musique copié dans le presse-papiers", Toast.LENGTH_SHORT).show();
+
+                    return true;
+                }
+            });
+
+
 
             loadImageFromApi(getItem(position), holder.imageView);
 
@@ -361,7 +379,7 @@ public class TransformFragment extends Fragment {
                                     }
 
                                     musicService.supprimerMusique(itemText);
-                                    Snackbar.make(v, itemText + " a été supprimée !", Snackbar.ANIMATION_MODE_FADE).show();
+                                    Snackbar.make(v, itemText + " a été supprimée !", Snackbar.LENGTH_LONG).show();
 
                                     Intent intent = requireActivity().getIntent();
                                     requireActivity().finish();
@@ -410,7 +428,7 @@ public class TransformFragment extends Fragment {
                                     // Lecture de la musique via Ice
                                     musicService.stop();
                                     musicService.play(titre);
-                                    Snackbar.make(view, titre + " a été lancée !",  Snackbar.ANIMATION_MODE_FADE).show();
+                                    Snackbar.make(view, titre + " a été lancée !",  Snackbar.LENGTH_LONG).show();
 
                                     // URL du flux audio à écouter en streaming
                                     String audioUrl = "http://192.168.1.62:8080/stream.mp3";
@@ -462,7 +480,7 @@ public class TransformFragment extends Fragment {
                     }).start();
                 }
             });
-            holder.textView.setOnClickListener(new View.OnClickListener() {
+            holder.imageView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     // URL de la vidéo YouTube en fonction du titre de la musique
@@ -486,7 +504,7 @@ public class TransformFragment extends Fragment {
                                     titleTextView.setText("Clip de " + getItem(position));
 
                                     // Charger l'URL de la vidéo YouTube dans le WebView
-                                    String video = "<iframe width=\"100%\" height=\"100%\" src=\"" + convertToEmbedUrl(youtubeUrl) + "\" frameborder=\"0\" allowfullscreen></iframe>";
+                                    String video = "<iframe width=\"100%\" height=\"100%\" src=\"" + convertToEmbedUrl(youtubeUrl) + "\" referrerpolicy=\"no-referrer-when-downgrade\" frameborder=\"1\" allowfullscreen></iframe>";
                                     webView.loadData(video,"text/html","utf-8");
                                     webView.getSettings().setJavaScriptEnabled(true);
 
@@ -503,6 +521,7 @@ public class TransformFragment extends Fragment {
 
         }
 
+        @SuppressLint("StaticFieldLeak")
         private void loadImageFromApi(String item, ImageView imageView) {
             new AsyncTask<Void, Void, String>() {
                 @Override
@@ -611,15 +630,20 @@ public class TransformFragment extends Fragment {
             }
         }
         private String parseVideoIdFromResponse(String response) {
-            String videoId = null;
-            String pattern = "\"videoId\"\\s*:\\s*\"([^\"]+)\"";
-            java.util.regex.Pattern r = java.util.regex.Pattern.compile(pattern);
-            java.util.regex.Matcher m = r.matcher(response);
-            if (m.find()) {
-                videoId = m.group(1);
+            try {
+                JSONObject jsonResponse = new JSONObject(response);
+                JSONArray items = jsonResponse.getJSONArray("items");
+                if (items.length() > 0) {
+                    JSONObject firstItem = items.getJSONObject(0);
+                    JSONObject id = firstItem.getJSONObject("id");
+                    return id.getString("videoId");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-            return videoId;
+            return null;
         }
+
     }
 
     private static class TransformViewHolder extends RecyclerView.ViewHolder {
