@@ -22,7 +22,7 @@
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="80dp"
         android:layout_marginEnd="0dp"
-        android:src="@drawable/ic_add"
+        android:src="@drawable/baseline_file_upload_24"
         app:elevation="6dp"
         app:layout_anchorGravity="bottom|end" />
 

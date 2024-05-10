@@ -1,21 +1,15 @@
 package com.example.spotifydupauvremobile.ui.reflow;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
-import android.graphics.Color;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.PlaybackParams;
 import android.os.Bundle;
-import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,7 +29,6 @@ import com.example.spotifydupauvremobile.databinding.FragmentReflowBinding;
 import com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -57,10 +50,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.FormBody;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -372,7 +363,7 @@ public class ReflowFragment extends Fragment {
                                     jouer(titre, artiste);
                                     View view = getView();
                                     if (view != null) {
-                                        Snackbar.make(view, titre + " a été lancée !", Snackbar.LENGTH_LONG).show();
+                                        Snackbar.make(view, titre + " a été lancée !",  Snackbar.ANIMATION_MODE_FADE).show();
                                     }
 
                                 }
@@ -391,7 +382,7 @@ public class ReflowFragment extends Fragment {
 
                                     View view = getView();
                                     if (view != null) {
-                                        Snackbar.make(view, titre + " a été supprimée !", Snackbar.LENGTH_LONG).show();
+                                        Snackbar.make(view, titre + " a été supprimée !",  Snackbar.ANIMATION_MODE_FADE).show();
                                     }
                                 }
                                 else {

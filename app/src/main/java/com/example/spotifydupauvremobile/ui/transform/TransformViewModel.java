@@ -1,19 +1,17 @@
 package com.example.spotifydupauvremobile.ui.transform;
 
-import android.app.AlertDialog;
-import android.content.Context;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import java.lang.Exception;
+import com.example.spotifydupauvremobile.ui.transform.MusicIce.MusicPrx;
+import com.zeroc.Ice.Communicator;
+import com.zeroc.Ice.Util;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.zeroc.Ice.*;
-import com.example.spotifydupauvremobile.ui.transform.MusicIce.*;
 public class TransformViewModel extends ViewModel {
 
     private final MutableLiveData<List<String>> mTexts;

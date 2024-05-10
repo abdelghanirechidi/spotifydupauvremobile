@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.okhttp)
     implementation(libs.picasso)
+    implementation(libs.api.common)
 
     //implementation(libs.ice.android)
 

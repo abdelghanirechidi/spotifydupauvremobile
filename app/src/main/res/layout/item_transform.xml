@@ -27,17 +27,27 @@
         tools:text="This is item # xx" />
 
     <ImageButton
-        android:id="@+id/button_delete"
+        android:id="@+id/button_play"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_marginStart="8dp"
-        android:src="@drawable/ic_delete"
+        android:src="@drawable/baseline_play_arrow_24"
         android:background="@null"
         app:layout_constraintBottom_toBottomOf="@id/text_view_item_transform"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/button_delete"
         app:layout_constraintStart_toEndOf="@id/text_view_item_transform"
         app:layout_constraintTop_toTopOf="@id/text_view_item_transform"/>
 
-
+    <ImageButton
+        android:id="@+id/button_delete"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="4dp"
+        android:src="@drawable/baseline_delete_outline_24"
+        android:background="@null"
+        app:layout_constraintBottom_toBottomOf="@id/button_play"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/button_play"
+        app:layout_constraintTop_toTopOf="@id/button_play"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

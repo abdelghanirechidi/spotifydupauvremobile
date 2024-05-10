@@ -14,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import com.example.spotifydupauvremobile.databinding.FragmentSlideshowBinding;
+import com.google.android.material.snackbar.Snackbar;
+
 public class SlideshowFragment extends Fragment {
 
     private SlideshowViewModel slideshowViewModel;
@@ -72,7 +74,7 @@ public class SlideshowFragment extends Fragment {
         Log.d("SlideshowFragment", "Nouvel artiste : " + artist);
         Log.d("SlideshowFragment", "Nouveau chemin : " + path);
 
-        Toast.makeText(getContext(), "Musique modifiée avec succès", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), "Musique modifiée avec succès",  Toast.LENGTH_SHORT).show();
 
     }
 

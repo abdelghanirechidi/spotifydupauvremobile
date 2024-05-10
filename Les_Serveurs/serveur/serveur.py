@@ -2,6 +2,7 @@ import sys
 import Ice
 import MusicIce
 import sqlite3
+import os
 import base64
 import vlc
 from queue import Queue
@@ -66,18 +67,34 @@ class MusicI(MusicIce.Music):
         self.execute_task(task)
         return True
 
-    
+
     # Fonction permettant de supprimer une musique
     def supprimerMusique(self, titre, current=None):
-            print(f"Suppression de musique : {titre}")
-            def task():
-                try:
+        print(f"Suppression de musique : {titre}")
+        def task():
+            try:
+                # Récupérer le chemin du fichier depuis la base de données
+                self.cursor.execute("SELECT audio_file FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
+                result = self.cursor.fetchone()
+                if result:
+                    chemin = result[0]
+                    # Supprimer la musique de la base de données
                     self.cursor.execute("DELETE FROM musics WHERE LOWER(title) = LOWER(?)", (titre,))
                     self.connection.commit()
-                except sqlite3.Error as e:
-                    print("Erreur lors de la suppression de la musique :", e)
-            self.execute_task(task)
-            return True
+
+                    # Supprimer le fichier physique
+                    if os.path.exists(chemin):
+                        os.remove(chemin)
+                        print("Fichier physique supprimé :", chemin)
+                    else:
+                        print("Le fichier physique n'existe pas :", chemin)
+                else:
+                    print("La musique n'existe pas dans la base de données.")
+            except sqlite3.Error as e:
+                print("Erreur lors de la suppression de la musique :", e)
+        self.execute_task(task)
+        return True
+
     
     # Fonction permettant de modifier une musique dans la base de données
     def modifierMusique(self, titre, nouveauTitre, nouvelAuteur, nouveauFichierAudio, current=None):

@@ -1,30 +1,28 @@
 package com.example.spotifydupauvremobile.ui.transform;
 
-import static kotlin.io.ByteStreamsKt.readBytes;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentResolver;
-import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,33 +39,35 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.spotifydupauvremobile.R;
 import com.example.spotifydupauvremobile.databinding.FragmentTransformBinding;
 import com.example.spotifydupauvremobile.databinding.ItemTransformBinding;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Scanner;
-import java.util.concurrent.CompletableFuture;
-
 import com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.material.snackbar.Snackbar;
 import com.squareup.picasso.Picasso;
 import com.zeroc.Ice.Communicator;
 import com.zeroc.Ice.LocalException;
 import com.zeroc.Ice.ObjectPrx;
-import com.zeroc.Ice.SocketException;
 import com.zeroc.Ice.Util;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
 
 
 /**
@@ -330,14 +330,10 @@ public class TransformFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull TransformViewHolder holder, @SuppressLint("RecyclerView") int position) {
-            holder.textView.setText(getItem(position));
-            /*
-            holder.imageView.setImageDrawable(
-                    ResourcesCompat.getDrawable(holder.imageView.getResources(),
-                            drawables.get(position),
-                            null));*/
 
-            //System.out.println(getItem(position));
+            holder.textView.setText(getItem(position));
+
+
             loadImageFromApi(getItem(position), holder.imageView);
 
             holder.buttonDelete.setOnClickListener(new View.OnClickListener() {
@@ -365,6 +361,7 @@ public class TransformFragment extends Fragment {
                                     }
 
                                     musicService.supprimerMusique(itemText);
+                                    Snackbar.make(v, itemText + " a été supprimée !", Snackbar.ANIMATION_MODE_FADE).show();
 
                                     Intent intent = requireActivity().getIntent();
                                     requireActivity().finish();
@@ -380,6 +377,125 @@ public class TransformFragment extends Fragment {
                                     communicator.destroy();
                                 }
                             }
+                        }
+                    }).start();
+                }
+            });
+
+
+            holder.buttonplay.setOnClickListener(new View.OnClickListener() {
+                String titre = getItem(position);
+                @Override
+                public void onClick(View view) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Communicator communicator = null;
+                            try {
+                                communicator = com.zeroc.Ice.Util.initialize();
+                                if (communicator != null) {
+                                    String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+                                    com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
+                                    if (base == null) {
+                                        Log.e("Error", "Invalid proxy");
+                                        return;
+                                    }
+
+                                    MusicPrx musicService = MusicPrx.checkedCast(base);
+                                    if (musicService == null) {
+                                        Log.e("Error", "Invalid MusicPrx");
+                                        return;
+                                    }
+
+                                    // Lecture de la musique via Ice
+                                    musicService.stop();
+                                    musicService.play(titre);
+                                    Snackbar.make(view, titre + " a été lancée !",  Snackbar.ANIMATION_MODE_FADE).show();
+
+                                    // URL du flux audio à écouter en streaming
+                                    String audioUrl = "http://192.168.1.62:8080/stream.mp3";
+
+                                    // Obtenez le contexte à partir de l'activité parente
+                                    Context context = getActivity();
+
+                                    // Vérifiez si le contexte est disponible
+                                    if (context != null) {
+                                        // Exécutez le code d'accès au lecteur sur le thread principal
+                                        requireActivity().runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    // Création d'un SimpleExoPlayer avec le contexte de l'activité
+                                                    SimpleExoPlayer exoPlayer = new SimpleExoPlayer.Builder(context).build();
+
+                                                    // Création de la source de média
+                                                    MediaItem mediaItem = MediaItem.fromUri(audioUrl);
+
+                                                    // Préparation du lecteur
+                                                    exoPlayer.setMediaItem(mediaItem);
+                                                    exoPlayer.prepare();
+                                                    exoPlayer.setPlayWhenReady(true);
+                                                } catch (Exception e) {
+                                                    Log.e("ReflowFragment", "Error creating ExoPlayer: " + e.getMessage());
+                                                    Toast.makeText(getContext(), "An error occurred while playing media.", Toast.LENGTH_SHORT).show();
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        Log.e("ReflowFragment", "Context is null. Unable to create ExoPlayer.");
+                                        Toast.makeText(getContext(), "An error occurred while playing media.", Toast.LENGTH_SHORT).show();
+                                    }
+
+
+
+                                }
+                            } catch (com.zeroc.Ice.LocalException e) {
+                                Log.e("Local Exception", e.getMessage());
+                            } catch (Exception e) {
+                                Log.e("Exception", e.getMessage());
+                            } finally {
+                                if (communicator != null) {
+                                    communicator.destroy();
+                                }
+                            }
+                        }
+                    }).start();
+                }
+            });
+            holder.textView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    // URL de la vidéo YouTube en fonction du titre de la musique
+                    String musicTitle = getItem(position) + " music clip";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            final String youtubeUrl = loadYoutubeClipUrl(musicTitle);
+
+                            requireActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // Créer le pop-up
+                                    View popupView = LayoutInflater.from(view.getContext()).inflate(R.layout.popup, null);
+                                    PopupWindow popupWindow = new PopupWindow(popupView, 600, 700, true);
+
+                                    // Trouver le WebView dans le layout du pop-up
+                                    TextView titleTextView = popupView.findViewById(R.id.title);
+                                    WebView webView = popupView.findViewById(R.id.webview);
+
+                                    titleTextView.setText("Clip de " + getItem(position));
+
+                                    // Charger l'URL de la vidéo YouTube dans le WebView
+                                    String video = "<iframe width=\"100%\" height=\"100%\" src=\"" + convertToEmbedUrl(youtubeUrl) + "\" frameborder=\"0\" allowfullscreen></iframe>";
+                                    webView.loadData(video,"text/html","utf-8");
+                                    webView.getSettings().setJavaScriptEnabled(true);
+
+
+
+                                    // Afficher le pop-up
+                                    popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
+                                }
+                            });
                         }
                     }).start();
                 }
@@ -415,7 +531,7 @@ public class TransformFragment extends Fragment {
         public String searchImageApi(String musicTitle, String apiKey, String searchEngineId) {
             try {
                 // Construire l'URL de requête
-                musicTitle = musicTitle + " cover";
+                musicTitle = musicTitle + " cover album musique";
                 String apiUrl = "https://www.googleapis.com/customsearch/v1" +
                         "?key=" + apiKey +
                         "&cx=" + searchEngineId +
@@ -423,7 +539,6 @@ public class TransformFragment extends Fragment {
                         "&searchType=image" +
                         "&num=1";
 
-                System.out.println(apiUrl);
 
                 // Ouvrir la connexion
                 URL url = new URL(apiUrl);
@@ -453,6 +568,58 @@ public class TransformFragment extends Fragment {
                 return null;
             }
         }
+
+        public String loadYoutubeClipUrl(String query) {
+            try {
+                String encodedQuery = URLEncoder.encode(query, "UTF-8");
+
+                String apiUrl = "https://www.googleapis.com/youtube/v3/search" +
+                        "?part=snippet" +
+                        "&q=" + encodedQuery +
+                        "&key=" + "AIzaSyBQNXXX0TYYSvYvAo-7ucHbyld3cmCO2ww";
+
+                URL url = new URL(apiUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                String videoId = parseVideoIdFromResponse(response.toString());
+
+                String youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
+
+                return youtubeUrl;
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        public String convertToEmbedUrl(String url) {
+            if (url.contains("youtube.com/watch?v=")) {
+                String videoId = url.substring(url.indexOf("v=") + 2);
+                return "https://www.youtube.com/embed/" + videoId;
+            } else {
+                return "Invalid YouTube URL";
+            }
+        }
+        private String parseVideoIdFromResponse(String response) {
+            String videoId = null;
+            String pattern = "\"videoId\"\\s*:\\s*\"([^\"]+)\"";
+            java.util.regex.Pattern r = java.util.regex.Pattern.compile(pattern);
+            java.util.regex.Matcher m = r.matcher(response);
+            if (m.find()) {
+                videoId = m.group(1);
+            }
+            return videoId;
+        }
     }
 
     private static class TransformViewHolder extends RecyclerView.ViewHolder {
@@ -461,11 +628,15 @@ public class TransformFragment extends Fragment {
         private final TextView textView;
         private final ImageButton buttonDelete;
 
+        private final ImageButton buttonplay;
+
         public TransformViewHolder(ItemTransformBinding binding) {
             super(binding.getRoot());
             imageView = binding.imageViewItemTransform;
             textView = binding.textViewItemTransform;
             buttonDelete = binding.buttonDelete;
+            buttonplay = binding.buttonPlay;
+
 
             imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             imageView.setAdjustViewBounds(true);

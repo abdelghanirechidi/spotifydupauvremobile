@@ -1,26 +1,26 @@
 package com.example.spotifydupauvremobile;
 
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.util.Log;
 import android.view.Menu;
-import android.Manifest;
-
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.navigation.NavigationView;
+import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spotifydupauvremobile.databinding.ActivityMainBinding;
+import com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.Snackbar;
+import com.zeroc.Ice.Communicator;
+import com.zeroc.Ice.Util;
+
 
 public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
@@ -34,8 +34,10 @@ public class MainActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.appBarMain.toolbar);
         if (binding.appBarMain.fab != null) {
-            binding.appBarMain.fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).setAnchorView(R.id.fab).show());
+            binding.appBarMain.fab.setOnClickListener(view -> {
+                stopMusique();
+                Snackbar.make(view, "La musique a été stoppé !", Snackbar.ANIMATION_MODE_FADE).show();
+            });
         }
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
         assert navHostFragment != null;
@@ -62,6 +64,42 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
+
+    private void stopMusique() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Communicator communicator = null;
+                try {
+                    communicator = Util.initialize();
+                    String proxyStr = "MusicService:tcp -h 192.168.1.62 -p 10000";
+
+                    com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxyStr);
+                    if (base == null) {
+                        Log.e("Error", "Invalid proxy");
+                        return;
+                    }
+
+                    com.example.spotifydupauvremobile.ui.reflow.MusicIce.MusicPrx musicService = MusicPrx.checkedCast(base);
+                    if (musicService == null) {
+                        Log.e("Error", "Invalid MusicPrx");
+                        return;
+                    }
+
+                    // Lecture de la musique via Ice
+                    musicService.stop();
+
+                } catch (Exception e) {
+                    Log.e("Exception", e.getMessage());
+                } finally {
+                    if (communicator != null) {
+                        communicator.destroy();
+                    }
+                }
+            }
+        }).start();
+    }
+
 
 
     @Override
